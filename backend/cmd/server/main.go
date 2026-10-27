@@ -61,7 +61,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	reviewer := groq.NewClient(&http.Client{}, cfg.apiKey, cfg.model)
+	reviewer := review.NewCachedReviewer(groq.NewClient(&http.Client{}, cfg.apiKey, cfg.model))
 	server := newServer(cfg, reviewer)
 	log.Printf("Listening on http://%s", server.Addr)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
