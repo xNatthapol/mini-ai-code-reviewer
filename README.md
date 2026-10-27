@@ -8,6 +8,7 @@ A small web app that reviews Go and Python snippets for logic errors. Paste code
 - Edit code with syntax highlighting and visible line numbers.
 - View affected lines, explanations, and suggested fixes.
 - See loading, error, and no-findings states; editing clears previous results.
+- Reuse successful reviews through an in-memory backend cache.
 
 Fixes are suggestions only. The app does not execute submitted code or apply changes automatically.
 
@@ -17,18 +18,22 @@ Fixes are suggestions only. The app does not execute submitted code or apply cha
 - **Backend:** Go with `net/http` and the standard library.
 - **AI:** Groq REST API, using `openai/gpt-oss-120b` by default.
 
-The frontend calls the Go API, which validates input, requests a review from Groq, and validates the structured response before returning findings. The API key stays on the backend. The app uses local React state, with no database or persistent review history.
+The frontend calls the Go API, which validates input and returns a cached review when available, or requests and validates a new review from Groq. The API key stays on the backend. The app uses local React state, with no database or persistent review history.
+
+The concurrency-safe cache stores up to 100 successful results by language and normalized code, including empty findings. Errors are not cached, and restarting the backend clears the cache.
 
 ## Project Structure
 
 ```text
 mini-ai-code-reviewer/
+├── .github/workflows/
+│   └── ci.yml                # Backend and frontend CI checks
 ├── backend/                  # Go API
 │   ├── cmd/server/
 │   │   └── main.go           # Configuration, routing, and server startup
 │   ├── internal/
 │   │   ├── api/              # HTTP handler and tests
-│   │   ├── review/           # Review contract, validation, and tests
+│   │   ├── review/           # Review contract, validation, cache, and tests
 │   │   └── groq/             # Provider client, prompt, and tests
 │   ├── .env.example          # Example environment variables
 │   └── go.mod                # Go module and version
@@ -133,4 +138,6 @@ From the repository root:
 (cd frontend && npm test && npm run build)
 ```
 
-The frontend build includes TypeScript checking. Automated tests cover request handling, provider response validation, and frontend request/result helpers without live AI calls.
+The frontend build includes TypeScript checking. Automated tests cover request handling, provider response validation, caching, and frontend request/result helpers without live AI calls.
+
+[GitHub Actions CI](.github/workflows/ci.yml) runs backend tests and vet, plus frontend tests and build, on pushes and pull requests.
